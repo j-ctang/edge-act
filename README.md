@@ -67,6 +67,18 @@ Apple M5 Pro with 24 GiB RAM, macOS 26.7, on battery with Low Power Mode enabled
 | ExecuTorch XNNPACK FP32 | 1,313.59 | 1,383.19 | 137.55 | 1.52e-10 | 0.000132 |
 | Core ML FP16 | 6.03 | 11.58 | 66.41 | 2.20e-4 | 0.193 |
 
-Core ML had 17.7× lower median latency than PyTorch eager in this run. ExecuTorch's median latency was 12.3× higher than eager despite delegating 20 partitions to XNNPACK. The lowered graph retained CPU fallback operators, including linear algebra and layer normalization. Compute-unit placement for Core ML and live task success were outside this measurement.
+Core ML had 17.7× lower median latency than PyTorch eager in this run. ExecuTorch's median latency was 12.3× higher than eager despite delegating 20 partitions to XNNPACK. The lowered graph retained CPU fallback operators, including linear algebra and layer normalization. The AC operator profile below identifies the dominant fallback cost. Compute-unit placement for Core ML and live task success were outside this measurement.
 
 [Raw benchmark results](results/benchmark.json)
+
+## ExecuTorch profiling
+
+Run this after exporting the original checkpoint.
+
+```sh
+.venv/bin/python profile_executorch.py
+```
+
+On AC Standard power, the original model's ETDump attributed 904.2 ms of summed median operator time to 18 fallback `addmm` calls. The 20 delegated calls accounted for 28.0 ms. A separate macOS stack sample found the fallback kernel in 3,271 of the 3,369 sampled inference frames on the calling thread. These measurements identify the dominant cost in the current ExecuTorch export. [Profile results](results/executorch-profile-ac.json)
+
+[Read the slowdown investigation](docs/investigation.md).
