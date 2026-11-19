@@ -25,45 +25,71 @@ class ActionChunk(torch.nn.Module):
         super().__init__()
         self.policy = policy
 
-    def forward(self, state, image):
-        return self.policy.predict_action_chunk({STATE: state, IMAGE: image})
+    def forward(self, state, *images):
+        batch = {STATE: state}
+        batch.update(zip(self.policy.config.image_features, images, strict=True))
+        return self.policy.predict_action_chunk(batch)
 
 
-def observations(data, preprocess):
+def decode_images(path, ordinals, shape):
+    unique = sorted(set(ordinals))
+    frame_filter = "+".join(f"eq(n,{frame})" for frame in unique)
+    raw = subprocess.check_output([
+        "ffmpeg", "-v", "error", "-threads", "1", "-filter_threads", "1",
+        "-i", str(path), "-vf", f"select='{frame_filter}'",
+        "-frames:v", str(len(unique)), "-fps_mode", "passthrough",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-threads", "1", "-",
+    ])
+    channels, height, width = shape
+    images = np.frombuffer(raw, dtype=np.uint8).reshape(len(unique), height, width, channels)
+    by_ordinal = dict(zip(unique, images, strict=True))
+    return [by_ordinal[ordinal] for ordinal in ordinals]
+
+
+def observations(data, preprocess, image_features):
+    image_shapes = {key: feature.shape for key, feature in image_features.items()}
+    manifest = data / "info.json"
+    fps = json.loads(manifest.read_text())["fps"] if manifest.exists() else 30
     frames = pq.read_table(data / "frames.parquet").to_pydict()
     episodes = pq.read_table(data / "episodes.parquet").to_pylist()
     episode_by_id = {episode["episode_index"]: episode for episode in episodes}
     groups = {}
     for row, episode_id in enumerate(frames["episode_index"]):
         episode = episode_by_id[episode_id]
-        if (episode[f"videos/{IMAGE}/chunk_index"], episode[f"videos/{IMAGE}/file_index"]) == (0, 0):
+        if all(
+            (episode[f"videos/{key}/chunk_index"], episode[f"videos/{key}/file_index"]) == (0, 0)
+            for key in image_shapes
+        ):
             groups.setdefault(episode_id, []).append(row)
-    selected = []
-    for rows in list(groups.values())[:4]:
-        for fraction in (0.1, 0.4, 0.7, 0.9):
-            row = rows[int(fraction * (len(rows) - 1))]
-            episode = episode_by_id[frames["episode_index"][row]]
-            timestamp = episode[f"videos/{IMAGE}/from_timestamp"] + frames["timestamp"][row]
-            selected.append((round(timestamp * 30), row))
-
+    selected = [
+        rows[int(fraction * (len(rows) - 1))]
+        for rows in list(groups.values())[:4]
+        for fraction in (0.1, 0.4, 0.7, 0.9)
+    ]
     if len(selected) != 16:
         raise ValueError("Expected four sampled frames from each of four episodes")
-    selected.sort()
-    frame_filter = "+".join(f"eq(n,{frame})" for frame, _ in selected)
-    raw = subprocess.check_output([
-        "ffmpeg", "-v", "error", "-i", str(data / "wrist.mp4"),
-        "-vf", f"select='{frame_filter}'", "-frames:v", str(len(selected)),
-        "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
-    ])
-    images = np.frombuffer(raw, dtype=np.uint8).reshape(len(selected), 480, 640, 3)
+
+    cameras = {}
+    for key, shape in image_shapes.items():
+        ordinals = [
+            round((episode_by_id[frames["episode_index"][row]][f"videos/{key}/from_timestamp"]
+                   + frames["timestamp"][row]) * fps)
+            for row in selected
+        ]
+        path = data / f"{key}.mp4"
+        if not path.exists() and key == IMAGE:
+            path = data / "wrist.mp4"
+        cameras[key] = decode_images(path, ordinals, shape)
+
     inputs = []
-    for image, (_, row) in zip(images, selected, strict=True):
+    for idx, row in enumerate(selected):
         batch = preprocess({
             STATE: torch.tensor(frames[STATE][row], dtype=torch.float32),
-            IMAGE: torch.from_numpy(image.copy()).permute(2, 0, 1).float() / 255,
+            **{key: torch.from_numpy(images[idx].copy()).permute(2, 0, 1).float() / 255
+               for key, images in cameras.items()},
         })
-        inputs.append((batch[STATE], batch[IMAGE].contiguous()))
-    return inputs, [frames["index"][row] for _, row in selected]
+        inputs.append((batch[STATE], *(batch[key].contiguous() for key in cameras)))
+    return inputs, [frames["index"][row] for row in selected]
 
 
 def benchmark(run, inputs, reference, postprocess, warmups, iterations, size):
@@ -87,6 +113,52 @@ def benchmark(run, inputs, reference, postprocess, warmups, iterations, size):
         "action_max_abs_error": errors.abs().max().item(),
         "latency_ms": times,
     }
+
+
+def export_executorch(model, example, path):
+    from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
+    from executorch.exir import to_edge_transform_and_lower
+    from executorch.runtime import Runtime
+
+    graph = torch.export.export(model, example)
+    program = to_edge_transform_and_lower(graph, partitioner=[XnnpackPartitioner()])
+    nodes = program.exported_program().graph.nodes
+    delegate_target = torch.ops.higher_order.executorch_call_delegate
+    delegates = sum(node.target == delegate_target for node in nodes)
+    if delegates == 0:
+        raise RuntimeError("No model partitions were delegated to XNNPACK")
+    details = {
+        "xnnpack_partitions": delegates,
+        "executorch_fallback_operators": dict(Counter(
+            str(node.target) for node in nodes
+            if node.op == "call_function" and node.target != delegate_target
+        )),
+    }
+    path.write_bytes(program.to_executorch().buffer)
+    method = Runtime.get().load_program(path).load_method("forward")
+    return lambda *sample: method.execute(sample)[0], details
+
+
+def export_coreml(model, example, path):
+    import coremltools as ct
+
+    graph = torch.jit.trace(model, example)
+    names = ["joint_positions", *(f"image_{i}" for i in range(len(example) - 1))]
+    package = ct.convert(
+        graph, convert_to="mlprogram", compute_precision=ct.precision.FLOAT16,
+        skip_model_load=True,
+        inputs=[ct.TensorType(name=name, shape=tensor.shape, dtype=np.float32)
+                for name, tensor in zip(names, example, strict=True)],
+        outputs=[ct.TensorType(name="actions", dtype=np.float32)],
+    )
+    package.save(str(path))
+    package = ct.models.MLModel(str(path), compute_units=ct.ComputeUnit.ALL)
+
+    def run(*sample):
+        inputs_by_name = {name: tensor.numpy() for name, tensor in zip(names, sample, strict=True)}
+        return torch.from_numpy(package.predict(inputs_by_name)["actions"])
+
+    return run
 
 
 @torch.no_grad()
@@ -115,7 +187,7 @@ def main():
         policy.config, pretrained_path=str(checkpoint),
         preprocessor_overrides={"device_processor": {"device": "cpu"}},
     )
-    inputs, frame_indices = observations(args.data, preprocess)
+    inputs, frame_indices = observations(args.data, preprocess, config.image_features)
     reference = [postprocess(model(*sample)) for sample in inputs]
     results = {
         "machine": subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True).strip(),
@@ -143,50 +215,18 @@ def main():
     record("pytorch_cpu", model, (checkpoint / "model.safetensors").stat().st_size)
 
     if "executorch" in args.backend:
-        from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
-        from executorch.exir import to_edge_transform_and_lower
-        from executorch.runtime import Runtime
-
         print("Exporting ExecuTorch model", flush=True)
-        graph = torch.export.export(model, inputs[0])
-        program = to_edge_transform_and_lower(graph, partitioner=[XnnpackPartitioner()])
-        nodes = program.exported_program().graph.nodes
-        delegate_target = torch.ops.higher_order.executorch_call_delegate
-        delegates = sum(node.target == delegate_target for node in nodes)
-        if delegates == 0:
-            raise RuntimeError("No model partitions were delegated to XNNPACK")
-        results["xnnpack_partitions"] = delegates
-        results["executorch_fallback_operators"] = dict(Counter(
-            str(node.target) for node in nodes
-            if node.op == "call_function" and node.target != delegate_target
-        ))
         path = args.output / "act.pte"
-        path.write_bytes(program.to_executorch().buffer)
-        method = Runtime.get().load_program(path).load_method("forward")
-        record("executorch_xnnpack_fp32", lambda *sample: method.execute(sample)[0], path.stat().st_size)
+        run, export_details = export_executorch(model, inputs[0], path)
+        results.update(export_details)
+        record("executorch_xnnpack_fp32", run, path.stat().st_size)
 
     if "coreml" in args.backend:
-        import coremltools as ct
-
         print("Exporting Core ML model", flush=True)
-        graph = torch.jit.trace(model, inputs[0])
         path = args.output / "act.mlpackage"
-        package = ct.convert(
-            graph, convert_to="mlprogram", compute_precision=ct.precision.FLOAT16,
-            inputs=[ct.TensorType(name=name, shape=tensor.shape, dtype=np.float32)
-                    for name, tensor in zip(("joint_positions", "image"), inputs[0], strict=True)],
-            outputs=[ct.TensorType(name="actions", dtype=np.float32)],
-        )
-        package.save(str(path))
-        package = ct.models.MLModel(str(path), compute_units=ct.ComputeUnit.ALL)
+        run = export_coreml(model, inputs[0], path)
         size = sum(file.stat().st_size for file in path.rglob("*") if file.is_file())
-
-        def run_coreml(state, image):
-            return torch.from_numpy(package.predict({
-                "joint_positions": state.numpy(), "image": image.numpy(),
-            })["actions"])
-
-        record("coreml_fp16_all", run_coreml, size)
+        record("coreml_fp16_all", run, size)
 
 
 if __name__ == "__main__":
