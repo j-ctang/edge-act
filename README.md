@@ -39,6 +39,8 @@ Action MSE and maximum absolute error compare full predicted chunks after the ch
 
 ## AC Standard benchmark
 
+[View the latency chart and comparison](docs/results.md).
+
 All three checkpoints ran on the M5 Pro on AC power in Standard mode. Each backend ran 10 warm-ups and 100 timed calls. Export error compares the full action chunks against the corresponding eager model on 16 recorded observations.
 
 | Checkpoint | Runtime | p50 (ms) | p99 (ms) | Artifact (MB) | Action MSE | Max action error |
