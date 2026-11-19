@@ -87,4 +87,4 @@ On AC Standard power, the original model's ETDump attributed 904.2 ms of summed 
 .venv/bin/python -m unittest discover -s tests
 ```
 
-The macOS GitHub Actions workflow exercises the same exporters with a deterministic two-camera ACT fixture and checks both output tensors against PyTorch.
+The macOS GitHub Actions workflow exercises the same exporters with a deterministic two-camera ACT fixture and checks both output tensors against PyTorch. The Core ML fixture uses CPU-only execution and a 0.01 absolute tolerance in normalized action space. The benchmark enables all compute units.

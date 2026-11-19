@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import coremltools as ct
 import torch
 from lerobot.configs.types import FeatureType, PolicyFeature
 
@@ -43,9 +44,13 @@ class ExportParityTest(unittest.TestCase):
             executorch, _ = export_executorch(model, samples[0], root / "act.pte")
             for sample in samples:
                 torch.testing.assert_close(executorch(*sample), model(*sample), atol=1e-5, rtol=1e-4)
-            coreml = export_coreml(model, samples[0], root / "act.mlpackage")
+            coreml = export_coreml(
+                model, samples[0], root / "act.mlpackage", compute_units=ct.ComputeUnit.CPU_ONLY
+            )
+            # FP16 kernels can differ across macOS hosts. The fixture works in
+            # normalized action space, with an absolute budget near zero.
             for sample in samples:
-                torch.testing.assert_close(coreml(*sample), model(*sample), atol=3e-3, rtol=3e-3)
+                torch.testing.assert_close(coreml(*sample), model(*sample), atol=1e-2, rtol=3e-3)
 
 
 if __name__ == "__main__":

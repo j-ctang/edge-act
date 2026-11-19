@@ -139,7 +139,7 @@ def export_executorch(model, example, path):
     return lambda *sample: method.execute(sample)[0], details
 
 
-def export_coreml(model, example, path):
+def export_coreml(model, example, path, *, compute_units=None):
     import coremltools as ct
 
     graph = torch.jit.trace(model, example)
@@ -152,7 +152,7 @@ def export_coreml(model, example, path):
         outputs=[ct.TensorType(name="actions", dtype=np.float32)],
     )
     package.save(str(path))
-    package = ct.models.MLModel(str(path), compute_units=ct.ComputeUnit.ALL)
+    package = ct.models.MLModel(str(path), compute_units=compute_units or ct.ComputeUnit.ALL)
 
     def run(*sample):
         inputs_by_name = {name: tensor.numpy() for name, tensor in zip(names, sample, strict=True)}
