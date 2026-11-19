@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" role="img" aria-labelledby="title description">
+<title id="title">Median inference latency across three ACT checkpoints</title>
+<desc id="description">Core ML has the lowest median on all three. ExecuTorch has the highest. The horizontal axis is logarithmic.</desc>
+<rect width="800" height="460" fill="#fff"/>
+<g font-family="system-ui,sans-serif" fill="#1e293b">
+<text x="28" y="40" font-size="24" font-weight="700">Median inference latency across three ACT checkpoints</text>
+<text x="28" y="66" font-size="15" fill="#475569">M5 Pro · AC Standard · 100 timed calls per runtime</text>
+<path d="M200.0 95V408" stroke="#dbe3ec"/><text x="200.0" y="428" text-anchor="middle" font-size="13">1</text>
+<path d="M335.5 95V408" stroke="#dbe3ec"/><text x="335.5" y="428" text-anchor="middle" font-size="13">10</text>
+<path d="M470.9 95V408" stroke="#dbe3ec"/><text x="470.9" y="428" text-anchor="middle" font-size="13">100</text>
+<path d="M606.4 95V408" stroke="#dbe3ec"/><text x="606.4" y="428" text-anchor="middle" font-size="13">1,000</text>
+<text x="28" y="104" font-size="16" font-weight="700">Compact</text>
+<text x="28" y="130" font-size="13">PyTorch eager</text><path d="M200 126H409.0" stroke="#365eb0" stroke-width="9" stroke-linecap="round"/><text x="758" y="130" text-anchor="end" font-size="13">34.89</text>
+<text x="28" y="151" font-size="13">ExecuTorch FP32</text><path d="M200 147H480.6" stroke="#087f76" stroke-width="9" stroke-linecap="round"/><text x="758" y="151" text-anchor="end" font-size="13">117.87</text>
+<text x="28" y="172" font-size="13">Core ML FP16</text><path d="M200 168H262.2" stroke="#a85610" stroke-width="9" stroke-linecap="round"/><text x="758" y="172" text-anchor="end" font-size="13">2.88</text>
+<text x="28" y="209" font-size="16" font-weight="700">Original</text>
+<text x="28" y="235" font-size="13">PyTorch eager</text><path d="M200 231H453.7" stroke="#365eb0" stroke-width="9" stroke-linecap="round"/><text x="758" y="235" text-anchor="end" font-size="13">74.62</text>
+<text x="28" y="256" font-size="13">ExecuTorch FP32</text><path d="M200 252H599.4" stroke="#087f76" stroke-width="9" stroke-linecap="round"/><text x="758" y="256" text-anchor="end" font-size="13">888.68</text>
+<text x="28" y="277" font-size="13">Core ML FP16</text><path d="M200 273H284.2" stroke="#a85610" stroke-width="9" stroke-linecap="round"/><text x="758" y="277" text-anchor="end" font-size="13">4.19</text>
+<text x="28" y="314" font-size="16" font-weight="700">ResNet-34</text>
+<text x="28" y="340" font-size="13">PyTorch eager</text><path d="M200 336H494.7" stroke="#365eb0" stroke-width="9" stroke-linecap="round"/><text x="758" y="340" text-anchor="end" font-size="13">149.80</text>
+<text x="28" y="361" font-size="13">ExecuTorch FP32</text><path d="M200 357H650.5" stroke="#087f76" stroke-width="9" stroke-linecap="round"/><text x="758" y="361" text-anchor="end" font-size="13">2,116.54</text>
+<text x="28" y="382" font-size="13">Core ML FP16</text><path d="M200 378H332.4" stroke="#a85610" stroke-width="9" stroke-linecap="round"/><text x="758" y="382" text-anchor="end" font-size="13">9.50</text>
+<text x="435" y="449" text-anchor="middle" font-size="13">Latency in milliseconds (log scale)</text>
+</g></svg>
