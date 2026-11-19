@@ -82,3 +82,11 @@ Run this after exporting the original checkpoint.
 On AC Standard power, the original model's ETDump attributed 904.2 ms of summed median operator time to 18 fallback `addmm` calls. The 20 delegated calls accounted for 28.0 ms. A separate macOS stack sample found the fallback kernel in 3,271 of the 3,369 sampled inference frames on the calling thread. These measurements identify the dominant cost in the current ExecuTorch export. [Profile results](results/executorch-profile-ac.json)
 
 [Read the slowdown investigation](docs/investigation.md).
+
+## Export parity test
+
+```sh
+.venv/bin/python -m unittest discover -s tests
+```
+
+The macOS GitHub Actions workflow exercises the same exporters with a deterministic two-camera ACT fixture and checks both output tensors against PyTorch. The Core ML fixture uses CPU-only execution and a 0.01 absolute tolerance in normalized action space. The benchmark enables all compute units.
