@@ -1,0 +1,19 @@
+{
+  "checkpoint": "TakuyaHiraoka/act_so101_pick_diverse_objects",
+  "power": "AC Standard",
+  "inputs": [[1, 6], [1, 3, 480, 640]],
+  "input_values": "zeros",
+  "timed_calls": 8,
+  "wall_p50_ms": 954.42,
+  "etdump": {
+    "method_p50_ms": 953.283584,
+    "fallback_addmm_calls": 18,
+    "fallback_addmm_sum_of_p50_ms": 904.204126,
+    "delegate_calls": 20,
+    "delegate_sum_of_p50_ms": 28.041456
+  },
+  "macos_sample": {
+    "inference_main_thread_samples": 3369,
+    "fallback_addmm_samples": 3271
+  }
+}
