@@ -2,6 +2,8 @@
 
 Run a pretrained LeRobot ACT policy locally on Apple Silicon and compare PyTorch eager, ExecuTorch with XNNPACK, and Core ML.
 
+[How EdgeACT works](docs/edgeact.md) · [How I investigated the slowdown](docs/investigation.md)
+
 ## Run the benchmark
 
 Install FFmpeg and uv, then run from the repository root.
@@ -80,8 +82,6 @@ Run this after exporting the original checkpoint.
 ```
 
 On AC Standard power, the original model's ETDump attributed 904.2 ms of summed median operator time to 18 fallback `addmm` calls. The 20 delegated calls accounted for 28.0 ms. A separate macOS stack sample found the fallback kernel in 3,271 of the 3,369 sampled inference frames on the calling thread. These measurements identify the dominant cost in the current ExecuTorch export. [Profile results](results/executorch-profile-ac.json)
-
-[Read the slowdown investigation](docs/investigation.md).
 
 ## Export parity test
 
