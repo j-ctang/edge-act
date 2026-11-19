@@ -16,5 +16,5 @@
 <path d="M400 422 v26 m-6 -7 l6 7 l6 -7" fill="none" stroke="#1e1e1e" stroke-width="2"/>
 <rect x="75" y="451" width="650" height="83" rx="13" fill="#b2f2bb" stroke="#1e1e1e" stroke-width="2"/>
 <text x="400" y="486" text-anchor="middle" font-size="22" font-weight="650">Check parity and broaden coverage</text>
-<text x="400" y="513" text-anchor="middle" font-size="19">Hosted test passes · three pretrained policies</text>
+<text x="400" y="513" text-anchor="middle" font-size="19">Tiny fixture passes · three policies benchmarked</text>
 </g></svg>

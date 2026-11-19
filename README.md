@@ -2,6 +2,8 @@
 
 Run a pretrained LeRobot ACT policy locally on Apple Silicon and compare PyTorch eager, ExecuTorch with XNNPACK, and Core ML.
 
+[How EdgeACT works](docs/edgeact.md) · [How I investigated the slowdown](docs/investigation.md)
+
 ## Run the benchmark
 
 Install FFmpeg and uv, then run from the repository root.
