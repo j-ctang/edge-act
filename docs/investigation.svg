@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 565" role="img" aria-labelledby="title">
+<title id="title">How we investigated the slowdown</title>
+<rect width="800" height="565" fill="white"/><g font-family="system-ui,sans-serif" fill="#1e1e1e">
+<text x="75" y="70" font-size="30" font-weight="650">How we investigated the slowdown</text>
+<rect x="75" y="106" width="650" height="83" rx="13" fill="#a5d8ff" stroke="#1e1e1e" stroke-width="2"/>
+<text x="400" y="141" text-anchor="middle" font-size="22" font-weight="650">Measure under controlled power</text>
+<text x="400" y="168" text-anchor="middle" font-size="19">Repeat on AC Standard power</text>
+<path d="M400 192 v26 m-6 -7 l6 7 l6 -7" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="75" y="221" width="650" height="83" rx="13" fill="#ffd8a8" stroke="#1e1e1e" stroke-width="2"/>
+<text x="400" y="256" text-anchor="middle" font-size="22" font-weight="650">Reproduce the slowdown</text>
+<text x="400" y="283" text-anchor="middle" font-size="19">Original ACT · 889 ms median</text>
+<path d="M400 307 v26 m-6 -7 l6 7 l6 -7" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="75" y="336" width="650" height="83" rx="13" fill="#ffd8a8" stroke="#1e1e1e" stroke-width="2"/>
+<text x="400" y="371" text-anchor="middle" font-size="22" font-weight="650">Trace and sample the runtime</text>
+<text x="400" y="398" text-anchor="middle" font-size="19">18 fallback addmm calls · ~95% of profiled time</text>
+<path d="M400 422 v26 m-6 -7 l6 7 l6 -7" fill="none" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="75" y="451" width="650" height="83" rx="13" fill="#b2f2bb" stroke="#1e1e1e" stroke-width="2"/>
+<text x="400" y="486" text-anchor="middle" font-size="22" font-weight="650">Check parity and broaden coverage</text>
+<text x="400" y="513" text-anchor="middle" font-size="19">Hosted test passes · three pretrained policies</text>
+</g></svg>
